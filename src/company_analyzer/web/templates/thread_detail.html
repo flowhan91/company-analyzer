@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ thread.title }}{% endblock %}
+{% block content %}
+  <p><a href="/threads?company={{ company_name }}">&larr; 전체 스레드</a></p>
+  <h1>{{ thread.title }} <span class="badge {{ thread.review_status }}">{{ thread.review_status | review_status_label }}</span></h1>
+  <p class="muted">{{ thread.domain or '' }} {{ thread.entity or '' }}</p>
+
+  {% for m in members %}
+    <div class="card">
+      <div class="muted">
+        <span class="stage">{{ m.thread_event.stage | stage_label }}</span>
+        {{ m.canonical_event.canonical_date | format_date(m.canonical_event.date_precision) }}
+      </div>
+      <h3><a class="title-link" href="/documents/for-event/{{ m.canonical_event.id }}">{{ m.canonical_event.title }}</a></h3>
+      {% if m.canonical_event.summary %}<div class="quote">{{ m.canonical_event.summary }}</div>{% endif %}
+    </div>
+    {% if not loop.last %}<div style="text-align:center; color:#9ca3af;">&darr;</div>{% endif %}
+  {% endfor %}
+{% endblock %}

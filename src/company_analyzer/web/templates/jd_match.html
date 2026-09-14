@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}JD 매칭 - {{ company_name }}{% endblock %}
+{% block content %}
+  <h1>채용공고(JD) 매칭</h1>
+  <p class="muted">채용공고 원문을 붙여넣으면, 이 기업의 타임라인/스레드 중 해당 업무와 실제로 관련된 근거를 찾아 보여줍니다.</p>
+
+  <form method="post" action="/jd-match" class="card">
+    <input type="hidden" name="company" value="{{ company_name }}">
+    <textarea name="jd_text" rows="10" style="width:100%; box-sizing:border-box; font-family:inherit; padding:8px; border:1px solid #d1d5db; border-radius:6px;" placeholder="채용공고 내용을 여기에 붙여넣으세요...">{{ jd_text }}</textarea>
+    <div style="margin-top:12px;">
+      <button class="btn approve" type="submit">매칭 실행</button>
+    </div>
+  </form>
+
+  {% if error %}
+    <div class="card" style="border-color:#dc2626;">
+      <div class="quote" style="border-color:#dc2626; color:#991b1b;">{{ error }}</div>
+    </div>
+  {% endif %}
+
+  {% if jd %}
+    <div class="card">
+      <h3>추출된 채용공고 요약</h3>
+      <div class="muted">직무: {{ jd.role or '미상' }} &middot; 세부분야: {{ jd.role_subtype or '미상' }} &middot; 도메인: {{ jd.domain or '미상' }}</div>
+      {% if jd.entities %}<div class="muted">언급된 기술/제품: {{ jd.entities | join(', ') }}</div>{% endif %}
+      {% if jd.tasks %}
+        <div style="margin-top:8px;">
+          <strong>추출된 업무 ({{ jd.tasks | length }}개)</strong>
+          <ul>
+            {% for task in jd.tasks %}<li>{{ task }}</li>{% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if candidates %}
+    <h2>관련도 높은 결과</h2>
+    {% for c in candidates %}
+      <div class="card">
+        <div class="muted">
+          {{ '스레드' if c.kind == 'thread' else '단일 이벤트' }} &middot; 관련도 점수 {{ '%.2f'|format(c.score) }}
+        </div>
+        <h3>
+          {% if c.kind == 'thread' %}
+            <a class="title-link" href="/threads/{{ c.id }}">{{ c.title }}</a>
+          {% else %}
+            <a class="title-link" href="/documents/for-event/{{ c.id }}">{{ c.title }}</a>
+          {% endif %}
+        </h3>
+        {% for m in c.matches %}
+          <div style="margin-top:8px;">
+            <div class="muted">JD 업무: {{ m.task }}</div>
+            <div class="quote">근거: {{ m.evidence_text }} <span class="muted">({{ m.canonical_event_title }})</span></div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  {% elif jd and not error %}
+    <div class="empty">관련된 이벤트/스레드를 찾지 못했습니다.</div>
+  {% endif %}
+{% endblock %}

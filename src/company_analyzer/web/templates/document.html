@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ canonical_event.title }} - 근거{% endblock %}
+{% block content %}
+  <p><a href="/timeline?company={{ company_name }}">&larr; 타임라인</a></p>
+  <h1>{{ canonical_event.title }}</h1>
+  <p class="muted">
+    {{ canonical_event.canonical_date | format_date(canonical_event.date_precision) }} &middot; {{ canonical_event.domain or '' }} &middot;
+    <span class="badge {{ canonical_event.review_status }}">{{ canonical_event.review_status | review_status_label }}</span>
+  </p>
+
+  <h3>근거 자료 (출처 {{ evidence_items|length }}건)</h3>
+  {% for item in evidence_items %}
+    <div class="card">
+      <div class="muted">
+        {{ item.document.source_type | source_type_label }} {{ '(공식 출처)' if item.document.is_official else '(뉴스 - 참고용)' }}
+        {% if item.is_seed %}&middot; 시드 이벤트{% endif %}
+        {% if item.evidence %}&middot; 매칭: {{ item.evidence.match_method | match_method_label }} ({{ '%.2f'|format(item.evidence.match_score) }})
+          <span class="badge {{ item.evidence.review_status }}">{{ item.evidence.review_status | review_status_label }}</span>
+        {% endif %}
+      </div>
+      <div><strong>{{ item.document.title }}</strong>{% if item.document.url %} - <a href="{{ item.document.url }}" target="_blank">원문 보기</a>{% endif %}</div>
+      <div class="quote">{{ item.evidence.matched_text if item.evidence and item.evidence.matched_text else item.event.raw_quote }}</div>
+    </div>
+  {% endfor %}
+{% endblock %}

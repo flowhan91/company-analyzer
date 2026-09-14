@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}검토 대기열 - {{ company_name }}{% endblock %}
+{% block content %}
+  <h1>검토 대기열</h1>
+  <p class="muted">불확실하거나 영향이 큰 AI 판단이 이곳에 모입니다. 승인하면 사람이 확인한 병합/스레드 연결이 실제로 반영되고, 거부하면 그대로 유지됩니다.</p>
+
+  <h2>재확인이 필요한 근거 ({{ evidence_items|length }})</h2>
+  {% if not evidence_items %}<div class="empty">대기 중인 항목이 없습니다.</div>{% endif %}
+  {% for item in evidence_items %}
+    <div class="card review-item">
+      <div class="muted">{{ item.event.event_type }} &middot; 점수 {{ '%.2f'|format(item.evidence.match_score) }} ({{ item.evidence.match_method | match_method_label }})</div>
+      <div class="quote">AI가 제시한 인용문: {{ item.evidence.raw_quote }}</div>
+      <div class="quote">가장 유사한 원문: {{ item.evidence.matched_text or '(일치하는 부분을 찾지 못함)' }}</div>
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button class="btn approve" hx-post="/review/evidence/{{ item.evidence.id }}/approve" hx-target="closest .review-item" hx-swap="outerHTML">승인</button>
+        <button class="btn reject" hx-post="/review/evidence/{{ item.evidence.id }}/reject" hx-target="closest .review-item" hx-swap="outerHTML">거부</button>
+      </div>
+    </div>
+  {% endfor %}
+
+  <h2>중복 가능성이 있는 이벤트 ({{ duplicate_items|length }})</h2>
+  {% if not duplicate_items %}<div class="empty">대기 중인 항목이 없습니다.</div>{% endif %}
+  {% for item in duplicate_items %}
+    <div class="card review-item">
+      <div class="muted">신뢰도 {{ '%.2f'|format(item.relationship.confidence) }} &middot; {{ item.relationship.rationale }}</div>
+      <div><strong>A:</strong> {{ item.event_a.entity or item.event_a.subject }} - {{ item.event_a.action }}</div>
+      <div class="quote">{{ item.event_a.raw_quote }}</div>
+      <div><strong>B:</strong> {{ item.event_b.entity or item.event_b.subject }} - {{ item.event_b.action }}</div>
+      <div class="quote">{{ item.event_b.raw_quote }}</div>
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button class="btn approve" hx-post="/review/duplicates/{{ item.relationship.id }}/approve" hx-target="closest .review-item" hx-swap="outerHTML">병합 승인</button>
+        <button class="btn reject" hx-post="/review/duplicates/{{ item.relationship.id }}/reject" hx-target="closest .review-item" hx-swap="outerHTML">별개로 유지</button>
+      </div>
+    </div>
+  {% endfor %}
+
+  <h2>스레드 연결 가능성 ({{ thread_items|length }})</h2>
+  {% if not thread_items %}<div class="empty">대기 중인 항목이 없습니다.</div>{% endif %}
+  {% for item in thread_items %}
+    <div class="card review-item">
+      <div class="muted">신뢰도 {{ '%.2f'|format(item.relationship.confidence) }} &middot; {{ item.relationship.rationale }}</div>
+      <div><strong>A:</strong> {{ item.canonical_event_a.title }} ({{ item.canonical_event_a.canonical_date }})</div>
+      <div><strong>B:</strong> {{ item.canonical_event_b.title }} ({{ item.canonical_event_b.canonical_date }})</div>
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button class="btn approve" hx-post="/review/threads/{{ item.relationship.id }}/approve" hx-target="closest .review-item" hx-swap="outerHTML">연결 승인</button>
+        <button class="btn reject" hx-post="/review/threads/{{ item.relationship.id }}/reject" hx-target="closest .review-item" hx-swap="outerHTML">독립 유지</button>
+      </div>
+    </div>
+  {% endfor %}
+{% endblock %}

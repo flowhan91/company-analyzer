@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Company Analyzer{% endblock %}</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.12/htmx.min.js"></script>
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: -apple-system, Segoe UI, sans-serif; margin: 0; background: #f7f7f8; color: #1a1a1a; }
+    header { background: #111827; color: white; padding: 12px 24px; display: flex; align-items: center; gap: 24px; }
+    header a { color: #d1d5db; text-decoration: none; font-size: 14px; }
+    header a.active, header a:hover { color: white; font-weight: 600; }
+    header .brand { font-weight: 700; color: white; margin-right: 8px; }
+    main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    .card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .badge.auto_applied, .badge.approved, .badge.auto_valid { background: #dcfce7; color: #166534; }
+    .badge.pending { background: #fef3c7; color: #92400e; }
+    .badge.rejected { background: #fee2e2; color: #991b1b; }
+    .muted { color: #6b7280; font-size: 13px; }
+    .quote { font-style: italic; border-left: 3px solid #d1d5db; padding-left: 10px; margin: 8px 0; color: #374151; }
+    table { border-collapse: collapse; width: 100%; }
+    td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+    .btn { border: 1px solid #d1d5db; background: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .btn.approve { border-color: #16a34a; color: #166534; }
+    .btn.reject { border-color: #dc2626; color: #991b1b; }
+    .btn:hover { background: #f3f4f6; }
+    .stage { display: inline-block; min-width: 70px; font-size: 12px; text-transform: uppercase; color: #4b5563; }
+    a.title-link { color: #111827; text-decoration: none; }
+    a.title-link:hover { text-decoration: underline; }
+    .empty { color: #9ca3af; font-style: italic; padding: 24px 0; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="brand">Company Analyzer</span>
+    <a href="/timeline?company={{ company_name }}" class="{{ 'active' if active_tab == 'timeline' else '' }}">타임라인</a>
+    <a href="/threads?company={{ company_name }}" class="{{ 'active' if active_tab == 'threads' else '' }}">스레드</a>
+    <a href="/review?company={{ company_name }}" class="{{ 'active' if active_tab == 'review' else '' }}">검토 대기열</a>
+    <a href="/jd-match?company={{ company_name }}" class="{{ 'active' if active_tab == 'jd_match' else '' }}">JD 매칭</a>
+    <span class="muted" style="margin-left:auto">{{ company_name }}</span>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

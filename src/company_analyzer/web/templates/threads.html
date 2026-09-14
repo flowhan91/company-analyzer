@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}스레드 - {{ company_name }}{% endblock %}
+{% block content %}
+  <h1>기업 스레드</h1>
+  {% if not threads %}
+    <div class="empty">아직 스레드가 없습니다. 이벤트 클러스터링 이후 `cana build-threads --company {{ company_name }}`를 실행하세요.</div>
+  {% endif %}
+  {% for item in threads %}
+    <div class="card">
+      <div class="muted">
+        <span class="badge {{ item.thread.review_status }}">{{ item.thread.review_status | review_status_label }}</span>
+        이벤트 {{ item.count }}개
+        {% if item.span_start %}
+          &middot; {{ item.span_start.canonical_date | format_date(item.span_start.date_precision) }}
+          {% if item.span_end.id != item.span_start.id %} - {{ item.span_end.canonical_date | format_date(item.span_end.date_precision) }}{% endif %}
+        {% endif %}
+      </div>
+      <h3><a class="title-link" href="/threads/{{ item.thread.id }}">{{ item.thread.title }}</a></h3>
+      <div class="muted">{{ item.thread.domain or '' }} {{ item.thread.entity or '' }}</div>
+    </div>
+  {% endfor %}
+{% endblock %}
