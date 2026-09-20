@@ -1,0 +1,44 @@
+<div class="card">
+  <h3 style="margin-top:0;">JD 매칭</h3>
+  <p class="muted" style="font-size:13px; margin-top:0;">예시 채용공고를 눌러보면, 이 기업의 타임라인/스레드 중 실제로 관련된 근거를 바로 보여줍니다.</p>
+
+  <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+    {% for p in presets %}
+      <button
+        type="button"
+        class="btn {{ 'approve' if p.id == active_preset else '' }}"
+        style="text-align:left;"
+        hx-post="/jd-match/panel"
+        hx-vals='{"preset_id": "{{ p.id }}", "company": "{{ company_name }}"}'
+        hx-target="#jd-panel-results"
+        hx-swap="innerHTML"
+        hx-indicator="#jd-panel-loading"
+      >
+        {{ p.label }}
+      </button>
+    {% endfor %}
+  </div>
+
+  <details>
+    <summary class="muted" style="cursor:pointer; font-size:13px;">직접 입력하기</summary>
+    <form
+      hx-post="/jd-match/panel"
+      hx-target="#jd-panel-results"
+      hx-swap="innerHTML"
+      hx-indicator="#jd-panel-loading"
+      style="margin-top:8px;"
+    >
+      <input type="hidden" name="company" value="{{ company_name }}">
+      <textarea
+        name="jd_text"
+        rows="6"
+        style="width:100%; box-sizing:border-box; font-family:inherit; padding:6px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;"
+        placeholder="채용공고 내용을 붙여넣으세요..."
+      ></textarea>
+      <button class="btn approve" type="submit" style="margin-top:6px;">매칭 실행</button>
+    </form>
+  </details>
+
+  <div id="jd-panel-loading" class="htmx-indicator muted" style="font-size:13px; margin-top:8px;">매칭 중...</div>
+  <div id="jd-panel-results" style="margin-top:10px;">{% include "jd_panel_results.html" %}</div>
+</div>

@@ -1,0 +1,38 @@
+{% if error %}
+  <div class="card" style="border-color:#dc2626; padding:10px;">
+    <div class="quote" style="border-color:#dc2626; color:#991b1b; margin:0; font-size:13px;">{{ error }}</div>
+  </div>
+{% endif %}
+
+{% if jd %}
+  <div class="card" style="padding:10px; font-size:13px;">
+    <strong>추출된 요약</strong>
+    <div class="muted">직무: {{ jd.role or '미상' }} &middot; {{ jd.role_subtype or '미상' }}</div>
+    {% if jd.tasks %}
+      <ul style="margin:6px 0 0; padding-left:18px;">
+        {% for task in jd.tasks %}<li>{{ task }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if candidates %}
+  {% for c in candidates %}
+    <div class="card" style="padding:10px; font-size:13px;">
+      <div class="muted">{{ '스레드' if c.kind == 'thread' else '단일 이벤트' }} &middot; 관련도 {{ '%.2f'|format(c.score) }}</div>
+      <div style="font-weight:600; margin:2px 0;">
+        {% if c.kind == 'thread' %}
+          <a class="title-link" href="/threads/{{ c.id }}">{{ c.title }}</a>
+        {% else %}
+          <a class="title-link" href="/documents/for-event/{{ c.id }}">{{ c.title }}</a>
+        {% endif %}
+      </div>
+      {% for m in c.matches %}
+        <div class="muted" style="margin-top:4px;">JD 업무: {{ m.task }}</div>
+        <div class="quote" style="margin:4px 0; font-size:12px;">{{ m.evidence_text }}</div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+{% elif jd and not error %}
+  <div class="empty" style="padding:12px 0;">관련된 이벤트/스레드를 찾지 못했습니다.</div>
+{% endif %}

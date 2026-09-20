@@ -11,7 +11,17 @@
     header a { color: #d1d5db; text-decoration: none; font-size: 14px; }
     header a.active, header a:hover { color: white; font-weight: 600; }
     header .brand { font-weight: 700; color: white; margin-right: 8px; }
-    main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    main { max-width: 1280px; margin: 24px auto; padding: 0 16px; }
+    .layout { display: flex; gap: 20px; align-items: flex-start; }
+    .layout .content { flex: 1; min-width: 0; }
+    .layout .sidebar { width: 320px; flex-shrink: 0; position: sticky; top: 16px; }
+    .layout .sidebar:empty { display: none; }
+    @media (max-width: 860px) {
+      .layout { flex-direction: column; }
+      .layout .sidebar { width: 100%; position: static; }
+    }
+    .htmx-indicator { opacity: 0; }
+    .htmx-request.htmx-indicator, .htmx-request .htmx-indicator { opacity: 1; }
     .card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
     .badge.auto_applied, .badge.approved, .badge.auto_valid { background: #dcfce7; color: #166534; }
@@ -37,11 +47,13 @@
     <a href="/timeline?company={{ company_name }}" class="{{ 'active' if active_tab == 'timeline' else '' }}">타임라인</a>
     <a href="/threads?company={{ company_name }}" class="{{ 'active' if active_tab == 'threads' else '' }}">스레드</a>
     <a href="/review?company={{ company_name }}" class="{{ 'active' if active_tab == 'review' else '' }}">검토 대기열</a>
-    <a href="/jd-match?company={{ company_name }}" class="{{ 'active' if active_tab == 'jd_match' else '' }}">JD 매칭</a>
     <span class="muted" style="margin-left:auto">{{ company_name }}</span>
   </header>
   <main>
-    {% block content %}{% endblock %}
+    <div class="layout">
+      <div class="content">{% block content %}{% endblock %}</div>
+      <aside class="sidebar">{% block sidebar %}{% endblock %}</aside>
+    </div>
   </main>
 </body>
 </html>

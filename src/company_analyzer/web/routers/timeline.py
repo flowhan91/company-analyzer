@@ -8,6 +8,7 @@ from company_analyzer.db import repository as repo
 from company_analyzer.timeline.build_timeline import build_timeline
 from company_analyzer.web.deps import list_company_names, resolve_company
 from company_analyzer.web.main import get_db, templates
+from company_analyzer.web.routers.jd_match import SAMPLE_JDS
 
 router = APIRouter()
 
@@ -58,5 +59,10 @@ def timeline_view(
             "domains": domains,
             "selected_domain": domain or "",
             "official_only": official_only,
+            "presets": SAMPLE_JDS,
+            "active_preset": None,
+            "jd": None,
+            "candidates": None,
+            "error": None,
         },
     )
