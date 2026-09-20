@@ -4,6 +4,7 @@ import click
 
 from company_analyzer.chunking.dispatch import chunk_document
 from company_analyzer.clustering.build_canonical_events import cluster_new_events
+from company_analyzer.clustering.dedupe_canonical_events import dedupe_canonical_events
 from company_analyzer.config import ConfigError, get_settings
 from company_analyzer.db import repository as repo
 from company_analyzer.db.connection import get_connection, init_db
@@ -85,6 +86,24 @@ def cluster_events_cmd(company: str) -> None:
         f"flagged_for_review={counts['flagged_for_review']} "
         f"deferred_news_event={counts['deferred_news_event']}"
     )
+
+
+@click.command("dedupe-canonical")
+@click.option("--company", required=True)
+def dedupe_canonical_cmd(company: str) -> None:
+    """Re-check already-created canonical events for same-event duplicates
+    the original clustering pass's entity/domain prefilter missed (a title
+    similarity + date-window pass instead), and merge confirmed ones."""
+    settings = get_settings()
+    init_db(settings)
+    try:
+        provider = get_llm_provider(settings)
+    except ConfigError as exc:
+        raise click.ClickException(str(exc)) from exc
+    with get_connection(settings) as conn:
+        company_id = _company_id(conn, company)
+        counts = dedupe_canonical_events(conn, company_id, provider)
+    click.echo(f"candidates={counts['candidates']} checked={counts['checked']} merged={counts['merged']}")
 
 
 @click.command("build-threads")

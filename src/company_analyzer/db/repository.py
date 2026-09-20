@@ -763,6 +763,62 @@ def update_canonical_event_title(conn: DBConnection, canonical_event_id: int, ti
     )
 
 
+def merge_canonical_events(conn: DBConnection, keep_id: int, remove_id: int, relationship_id: int | None = None) -> None:
+    """Fold `remove_id` into `keep_id` after a same_event decision made
+    *between two already-created canonical events* - a case the original
+    clustering pass never checked, since it only compares a new raw event
+    against existing canonical seeds (see dedupe_canonical_events.py for why
+    that misses duplicates tagged with different entity/domain values).
+
+    Moves raw-event membership and thread membership over to `keep_id`, drops
+    now-redundant relationship rows, and deletes `remove_id`.
+    """
+    conn.execute(
+        "UPDATE event_cluster_members SET canonical_event_id = %s WHERE canonical_event_id = %s",
+        (keep_id, remove_id),
+    )
+    # Both events may already sit in the same thread - drop remove_id's row
+    # there first so re-pointing the rest doesn't violate the
+    # UNIQUE(thread_id, canonical_event_id) constraint.
+    conn.execute(
+        """
+        DELETE FROM thread_events te
+        WHERE te.canonical_event_id = %s
+          AND EXISTS (
+            SELECT 1 FROM thread_events te2
+            WHERE te2.thread_id = te.thread_id AND te2.canonical_event_id = %s
+          )
+        """,
+        (remove_id, keep_id),
+    )
+    conn.execute(
+        "UPDATE thread_events SET canonical_event_id = %s WHERE canonical_event_id = %s",
+        (keep_id, remove_id),
+    )
+    # Relationship rows are per-pair LLM decision logs, not load-bearing after
+    # a merge - simplest to drop any referencing the removed id rather than
+    # risk a UNIQUE(canonical_event_a_id, canonical_event_b_id) collision.
+    # thread_events.relationship_id can point at one of these rows, so null
+    # that out first or the delete below hits a foreign-key violation.
+    conn.execute(
+        """
+        UPDATE thread_events SET relationship_id = NULL
+        WHERE relationship_id IN (
+            SELECT id FROM canonical_event_relationships
+            WHERE canonical_event_a_id = %s OR canonical_event_b_id = %s
+        )
+        """,
+        (remove_id, remove_id),
+    )
+    conn.execute("DELETE FROM canonical_event_relationships WHERE canonical_event_a_id = %s OR canonical_event_b_id = %s", (remove_id, remove_id))
+    conn.execute("DELETE FROM canonical_events WHERE id = %s", (remove_id,))
+    write_audit(
+        conn, table_name="canonical_events", record_id=remove_id, action="merge",
+        actor="system:dedupe", before={"id": remove_id},
+        after={"merged_into": keep_id, "relationship_id": relationship_id},
+    )
+
+
 def list_canonical_events(
     conn: DBConnection,
     company_id: int,

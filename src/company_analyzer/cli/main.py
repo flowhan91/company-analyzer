@@ -8,6 +8,7 @@ from company_analyzer.cli.commands.pipeline import (
     build_threads_cmd,
     chunk_cmd,
     cluster_events_cmd,
+    dedupe_canonical_cmd,
     extract_cmd,
     run_all_cmd,
     show_threads_cmd,
@@ -50,6 +51,7 @@ cli.add_command(chunk_cmd)
 cli.add_command(extract_cmd)
 cli.add_command(validate_evidence_cmd)
 cli.add_command(cluster_events_cmd)
+cli.add_command(dedupe_canonical_cmd)
 cli.add_command(build_threads_cmd)
 cli.add_command(show_timeline_cmd)
 cli.add_command(show_threads_cmd)
