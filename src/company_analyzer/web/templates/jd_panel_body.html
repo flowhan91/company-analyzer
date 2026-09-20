@@ -1,0 +1,44 @@
+<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+  {% for p in presets %}
+    <button
+      type="button"
+      class="btn {{ 'jd-active' if p.id == active_preset else '' }}"
+      style="text-align:left;"
+      hx-post="/jd-match/panel"
+      hx-vals='{"preset_id": "{{ p.id }}", "company": "{{ company_name }}", "domain": "{{ selected_domain or '' }}", "official_only": "{{ 'true' if official_only else '' }}"}'
+      hx-target="#jd-panel-body"
+      hx-swap="innerHTML"
+      hx-indicator="#jd-panel-loading"
+    >
+      {{ p.label }}
+    </button>
+  {% endfor %}
+</div>
+
+<details {{ 'open' if jd_text and not active_preset else '' }}>
+  <summary class="muted" style="cursor:pointer; font-size:13px;">직접 입력하기</summary>
+  <form
+    hx-post="/jd-match/panel"
+    hx-target="#jd-panel-body"
+    hx-swap="innerHTML"
+    hx-indicator="#jd-panel-loading"
+    style="margin-top:8px;"
+  >
+    <input type="hidden" name="company" value="{{ company_name }}">
+    <input type="hidden" name="domain" value="{{ selected_domain or '' }}">
+    <input type="hidden" name="official_only" value="{{ 'true' if official_only else '' }}">
+    <textarea
+      name="jd_text"
+      rows="6"
+      style="width:100%; box-sizing:border-box; font-family:inherit; padding:6px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;"
+      placeholder="채용공고 내용을 붙여넣으세요..."
+    >{{ jd_text if not active_preset else '' }}</textarea>
+    <button class="btn approve" type="submit" style="margin-top:6px;">매칭 실행</button>
+  </form>
+</details>
+
+<div id="jd-panel-loading" class="htmx-indicator muted" style="font-size:13px; margin-top:8px;">매칭 중...</div>
+
+<div style="margin-top:10px;">
+  {% include "jd_panel_results.html" %}
+</div>

@@ -1,0 +1,15 @@
+{% include "jd_panel_body.html" %}
+
+<div id="timeline-list" hx-swap-oob="innerHTML">
+  {% include "timeline_rows.html" %}
+</div>
+
+<label
+  class="muted"
+  id="jd-only-toggle-wrap"
+  hx-swap-oob="outerHTML"
+  style="{{ 'display:flex' if candidates else 'display:none' }}; margin-bottom:12px; align-items:center; gap:6px;"
+>
+  <input type="checkbox" id="jd-only-toggle" onchange="document.getElementById('timeline-list').classList.toggle('jd-only', this.checked)">
+  관련 이벤트만 보기
+</label>

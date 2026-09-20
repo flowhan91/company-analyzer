@@ -4,9 +4,7 @@ from company_analyzer.db.connection import DBConnection
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from company_analyzer.db import repository as repo
-from company_analyzer.timeline.build_timeline import build_timeline
-from company_analyzer.web.deps import list_company_names, resolve_company
+from company_analyzer.web.deps import build_timeline_rows, list_company_names, resolve_company
 from company_analyzer.web.main import get_db, templates
 from company_analyzer.web.routers.jd_match import SAMPLE_JDS
 
@@ -30,23 +28,7 @@ def timeline_view(
     conn: DBConnection = Depends(get_db),
 ):
     company_row = resolve_company(conn, company)
-    events = build_timeline(conn, company_row.id)
-
-    # Bulk-fetched once per request instead of once per row - see
-    # list_official_source_canonical_event_ids/list_threads_by_canonical_event
-    # docstrings for why the old per-row queries made this page very slow.
-    official_ids = repo.list_official_source_canonical_event_ids(conn, company_row.id) if official_only else None
-    threads_by_event = repo.list_threads_by_canonical_event(conn, company_row.id)
-
-    rows = []
-    for ce in events:
-        if domain and (ce.domain or "").lower() != domain.lower():
-            continue
-        if official_only and ce.id not in official_ids:
-            continue
-        rows.append({"event": ce, "threads": threads_by_event.get(ce.id, [])})
-
-    domains = sorted({ce.domain for ce in events if ce.domain})
+    rows, domains = build_timeline_rows(conn, company_row.id, domain=domain, official_only=official_only)
 
     return templates.TemplateResponse(
         request,
@@ -64,5 +46,7 @@ def timeline_view(
             "jd": None,
             "candidates": None,
             "error": None,
+            "related_ids": None,
+            "score_by_id": {},
         },
     )

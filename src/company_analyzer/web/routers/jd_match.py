@@ -7,7 +7,7 @@ from company_analyzer.db.connection import DBConnection
 from company_analyzer.jd_matching.matcher import EmptyJDError, NoEmbeddedEvidenceError, match_jd
 from company_analyzer.jd_matching.parser import parse_and_store_jd
 from company_analyzer.llm.factory import get_llm_provider
-from company_analyzer.web.deps import list_company_names, resolve_company
+from company_analyzer.web.deps import build_timeline_rows, list_company_names, resolve_company
 from company_analyzer.web.main import get_db, templates
 
 router = APIRouter()
@@ -64,7 +64,7 @@ SAMPLE_JDS: list[dict[str, str]] = [
 ]
 
 
-def _run_match(conn: DBConnection, company_row, jd_text: str | None) -> dict:
+def _run_match(conn: DBConnection, company_row, jd_text: str | None, top_n: int = 10) -> dict:
     context: dict = {"jd_text": jd_text or "", "jd": None, "candidates": None, "error": None}
 
     try:
@@ -81,7 +81,7 @@ def _run_match(conn: DBConnection, company_row, jd_text: str | None) -> dict:
     context["jd"] = jd
 
     try:
-        context["candidates"] = match_jd(conn, company_row.id, jd, provider, top_n=3)
+        context["candidates"] = match_jd(conn, company_row.id, jd, provider, top_n=top_n)
     except EmptyJDError:
         context["error"] = "채용공고에서 구체적인 업무 내용을 추출하지 못했습니다. 더 상세한 내용을 붙여넣어 주세요."
     except NoEmbeddedEvidenceError:
@@ -91,6 +91,23 @@ def _run_match(conn: DBConnection, company_row, jd_text: str | None) -> dict:
         )
 
     return context
+
+
+def _related_ids_and_scores(context: dict) -> tuple[set[int] | None, dict[int, float]]:
+    """Flatten match candidates (threads and standalone events alike) down to
+    the individual canonical-event ids they're backed by, so the timeline can
+    highlight the actual event cards rather than just listing candidates."""
+    if context.get("jd") is None:
+        return None, {}
+
+    related_ids: set[int] = set()
+    score_by_id: dict[int, float] = {}
+    for candidate in context.get("candidates") or []:
+        for m in candidate.matches:
+            related_ids.add(m.canonical_event_id)
+            if m.canonical_event_id not in score_by_id or m.score > score_by_id[m.canonical_event_id]:
+                score_by_id[m.canonical_event_id] = m.score
+    return related_ids, score_by_id
 
 
 @router.get("/jd-match")
@@ -140,10 +157,16 @@ def jd_match_panel(
     company: str = Form(...),
     preset_id: str | None = Form(default=None),
     jd_text: str | None = Form(default=None),
+    domain: str | None = Form(default=None),
+    official_only: str | None = Form(default=None),
     conn: DBConnection = Depends(get_db),
 ):
-    """HTMX partial used by the timeline sidebar - returns just the results
-    fragment (no page chrome) so it can be swapped in without a full reload."""
+    """HTMX endpoint backing the timeline sidebar. Returns the sidebar body
+    (buttons + results) as the primary swap target, plus two out-of-band
+    fragments in the same response: the main timeline list re-rendered with
+    matching event cards highlighted, and the "관련 이벤트만 보기" toggle
+    made visible - so one click updates both the sidebar and the timeline
+    without a full page reload."""
     company_row = resolve_company(conn, company)
 
     text = jd_text
@@ -153,4 +176,16 @@ def jd_match_panel(
 
     context = _run_match(conn, company_row, text)
     context["active_preset"] = preset_id
-    return templates.TemplateResponse(request, "jd_panel_results.html", context)
+    context["presets"] = SAMPLE_JDS
+    context["company_name"] = company_row.name
+    context["selected_domain"] = domain or ""
+    context["official_only"] = bool(official_only)
+
+    related_ids, score_by_id = _related_ids_and_scores(context)
+    context["related_ids"] = related_ids
+    context["score_by_id"] = score_by_id
+
+    rows, _domains = build_timeline_rows(conn, company_row.id, domain=domain or None, official_only=bool(official_only))
+    context["rows"] = rows
+
+    return templates.TemplateResponse(request, "jd_panel_oob.html", context)

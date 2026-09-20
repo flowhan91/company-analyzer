@@ -19,25 +19,12 @@
     </label>
   </form>
 
-  {% if not rows %}
-    <div class="empty">아직 정리된 이벤트가 없습니다. 이 기업에 대해 파이프라인(수집 &rarr; 분할 &rarr; 추출 &rarr; 근거 검증 &rarr; 이벤트 클러스터링)을 먼저 실행하세요.</div>
-  {% endif %}
+  <label class="muted" id="jd-only-toggle-wrap" style="display:none; margin-bottom:12px; align-items:center; gap:6px;">
+    <input type="checkbox" id="jd-only-toggle" onchange="document.getElementById('timeline-list').classList.toggle('jd-only', this.checked)">
+    관련 이벤트만 보기
+  </label>
 
-  {% for row in rows %}
-    {% set ce = row.event %}
-    <div class="card">
-      <div class="muted">{{ ce.canonical_date | format_date(ce.date_precision) }} &middot; {{ ce.domain or '' }} &middot;
-        <span class="badge {{ ce.review_status }}">{{ ce.review_status | review_status_label }}</span>
-      </div>
-      <h3><a class="title-link" href="/documents/for-event/{{ ce.id }}">{{ ce.title }}</a></h3>
-      {% if ce.summary %}<div class="quote">{{ ce.summary }}</div>{% endif %}
-      {% if row.threads %}
-        <div class="muted">포함된 스레드:
-          {% for t in row.threads %}
-            <a href="/threads/{{ t.id }}">{{ t.title }}</a>{{ ", " if not loop.last else "" }}
-          {% endfor %}
-        </div>
-      {% endif %}
-    </div>
-  {% endfor %}
+  <div id="timeline-list">
+    {% include "timeline_rows.html" %}
+  </div>
 {% endblock %}

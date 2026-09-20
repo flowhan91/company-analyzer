@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from company_analyzer.db import repository as repo
 from company_analyzer.db.connection import DBConnection
 from company_analyzer.models import Company
+from company_analyzer.timeline.build_timeline import build_timeline
 
 
 def resolve_company(conn: DBConnection, company_name: str | None) -> Company:
@@ -22,3 +23,29 @@ def resolve_company(conn: DBConnection, company_name: str | None) -> Company:
 def list_company_names(conn: DBConnection) -> list[str]:
     rows = conn.execute("SELECT name FROM companies ORDER BY name").fetchall()
     return [r["name"] for r in rows]
+
+
+def build_timeline_rows(
+    conn: DBConnection,
+    company_id: int,
+    domain: str | None = None,
+    official_only: bool = False,
+) -> tuple[list[dict], list[str]]:
+    """Shared by the timeline page and the JD-match sidebar (which re-renders
+    the same rows, annotated with match info, as an HTMX out-of-band swap) -
+    kept in one place so the two never drift apart on filtering/threading."""
+    events = build_timeline(conn, company_id)
+
+    official_ids = repo.list_official_source_canonical_event_ids(conn, company_id) if official_only else None
+    threads_by_event = repo.list_threads_by_canonical_event(conn, company_id)
+
+    rows = []
+    for ce in events:
+        if domain and (ce.domain or "").lower() != domain.lower():
+            continue
+        if official_only and ce.id not in official_ids:
+            continue
+        rows.append({"event": ce, "threads": threads_by_event.get(ce.id, [])})
+
+    domains = sorted({ce.domain for ce in events if ce.domain})
+    return rows, domains
