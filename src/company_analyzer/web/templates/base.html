@@ -7,14 +7,20 @@
   <style>
     :root { color-scheme: light; }
     body { font-family: -apple-system, Segoe UI, sans-serif; margin: 0; background: #f7f7f8; color: #1a1a1a; }
-    header { background: #111827; color: white; padding: 12px 24px; display: flex; align-items: center; gap: 24px; }
+    header { background: #111827; color: white; padding: 12px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
     header a { color: #d1d5db; text-decoration: none; font-size: 14px; }
     header a.active, header a:hover { color: white; font-weight: 600; }
     header .brand { font-weight: 700; color: white; margin-right: 8px; }
-    header select.company-switch {
-      margin-left: auto; background: #1f2937; color: white; border: 1px solid #374151;
-      border-radius: 6px; padding: 5px 10px; font-size: 13px; cursor: pointer;
+    header .company-picker {
+      margin-left: auto; display: flex; align-items: center; gap: 8px;
+      background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 6px 8px 6px 12px;
     }
+    header .company-picker label { color: #9ca3af; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    header select.company-switch {
+      background: #111827; color: white; border: 1px solid #2563eb;
+      border-radius: 6px; padding: 6px 12px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    header select.company-switch:hover { border-color: #60a5fa; }
     main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
     .htmx-indicator { opacity: 0; }
     .htmx-request.htmx-indicator, .htmx-request .htmx-indicator { opacity: 1; }
@@ -49,11 +55,14 @@
     <a href="/timeline?company={{ company_name }}" class="{{ 'active' if active_tab == 'timeline' else '' }}">타임라인</a>
     <a href="/threads?company={{ company_name }}" class="{{ 'active' if active_tab == 'threads' else '' }}">스레드</a>
     <a href="/review?company={{ company_name }}" class="{{ 'active' if active_tab == 'review' else '' }}">검토 대기열</a>
-    <select class="company-switch" onchange="location.href='/jd-match?company=' + encodeURIComponent(this.value)">
-      {% for c in companies %}
-        <option value="{{ c }}" {{ 'selected' if c == company_name else '' }}>{{ c }}</option>
-      {% endfor %}
-    </select>
+    <div class="company-picker">
+      <label for="company-switch">기업</label>
+      <select id="company-switch" class="company-switch" onchange="location.href='/jd-match?company=' + encodeURIComponent(this.value)">
+        {% for c in companies %}
+          <option value="{{ c }}" {{ 'selected' if c == company_name else '' }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
   </header>
   <main>
     {% block content %}{% endblock %}
