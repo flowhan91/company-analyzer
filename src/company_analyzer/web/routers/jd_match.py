@@ -110,6 +110,23 @@ def _related_ids_and_scores(context: dict) -> tuple[set[int] | None, dict[int, f
     return related_ids, score_by_id
 
 
+def _base_context(company_row, active_preset: str | None) -> dict:
+    return {
+        "company_name": company_row.name,
+        "active_tab": "jd_match",
+        "presets": SAMPLE_JDS,
+        "active_preset": active_preset,
+        "jd_text": "",
+        "jd": None,
+        "candidates": None,
+        "error": None,
+        "related_ids": None,
+        "score_by_id": {},
+        "rows": [],
+        "thread_candidates": [],
+    }
+
+
 @router.get("/jd-match")
 def jd_match_form(
     request: Request,
@@ -117,56 +134,22 @@ def jd_match_form(
     conn: DBConnection = Depends(get_db),
 ):
     company_row = resolve_company(conn, company)
-    return templates.TemplateResponse(
-        request,
-        "jd_match.html",
-        {
-            "company_name": company_row.name,
-            "companies": list_company_names(conn),
-            "active_tab": "jd_match",
-            "jd_text": "",
-            "jd": None,
-            "candidates": None,
-            "error": None,
-        },
-    )
-
-
-@router.post("/jd-match")
-def jd_match_submit(
-    request: Request,
-    company: str = Form(...),
-    jd_text: str = Form(...),
-    conn: DBConnection = Depends(get_db),
-):
-    company_row = resolve_company(conn, company)
-    context = _run_match(conn, company_row, jd_text)
-    context.update(
-        {
-            "company_name": company_row.name,
-            "companies": list_company_names(conn),
-            "active_tab": "jd_match",
-        }
-    )
+    context = _base_context(company_row, active_preset=None)
+    context["companies"] = list_company_names(conn)
     return templates.TemplateResponse(request, "jd_match.html", context)
 
 
-@router.post("/jd-match/panel")
-def jd_match_panel(
+@router.post("/jd-match/results")
+def jd_match_results(
     request: Request,
     company: str = Form(...),
     preset_id: str | None = Form(default=None),
     jd_text: str | None = Form(default=None),
-    domain: str | None = Form(default=None),
-    official_only: str | None = Form(default=None),
     conn: DBConnection = Depends(get_db),
 ):
-    """HTMX endpoint backing the timeline sidebar. Returns the sidebar body
-    (buttons + results) as the primary swap target, plus two out-of-band
-    fragments in the same response: the main timeline list re-rendered with
-    matching event cards highlighted, and the "관련 이벤트만 보기" toggle
-    made visible - so one click updates both the sidebar and the timeline
-    without a full page reload."""
+    """HTMX endpoint that runs the match and returns the whole results body
+    (JD summary, related threads, and the full timeline re-sorted/highlighted
+    by relevance) as one fragment swapped into #jd-panel-body."""
     company_row = resolve_company(conn, company)
 
     text = jd_text
@@ -178,14 +161,20 @@ def jd_match_panel(
     context["active_preset"] = preset_id
     context["presets"] = SAMPLE_JDS
     context["company_name"] = company_row.name
-    context["selected_domain"] = domain or ""
-    context["official_only"] = bool(official_only)
 
     related_ids, score_by_id = _related_ids_and_scores(context)
     context["related_ids"] = related_ids
     context["score_by_id"] = score_by_id
+    context["thread_candidates"] = [c for c in (context["candidates"] or []) if c.kind == "thread"]
 
-    rows, _domains = build_timeline_rows(conn, company_row.id, domain=domain or None, official_only=bool(official_only))
+    rows: list[dict] = []
+    if context["jd"] is not None:
+        rows, _domains = build_timeline_rows(conn, company_row.id)
+        if related_ids is not None:
+            # Stable sort: matches float to the top ordered by score desc,
+            # everything else (sharing the same -1 key) keeps its original
+            # chronological order beneath them.
+            rows.sort(key=lambda row: score_by_id.get(row["event"].id, -1), reverse=True)
     context["rows"] = rows
 
-    return templates.TemplateResponse(request, "jd_panel_oob.html", context)
+    return templates.TemplateResponse(request, "jd_panel_body.html", context)

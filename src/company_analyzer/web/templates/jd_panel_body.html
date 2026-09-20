@@ -1,11 +1,11 @@
-<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px; max-width:480px;">
   {% for p in presets %}
     <button
       type="button"
       class="btn {{ 'jd-active' if p.id == active_preset else '' }}"
       style="text-align:left;"
-      hx-post="/jd-match/panel"
-      hx-vals='{"preset_id": "{{ p.id }}", "company": "{{ company_name }}", "domain": "{{ selected_domain or '' }}", "official_only": "{{ 'true' if official_only else '' }}"}'
+      hx-post="/jd-match/results"
+      hx-vals='{"preset_id": "{{ p.id }}", "company": "{{ company_name }}"}'
       hx-target="#jd-panel-body"
       hx-swap="innerHTML"
       hx-indicator="#jd-panel-loading"
@@ -15,18 +15,16 @@
   {% endfor %}
 </div>
 
-<details {{ 'open' if jd_text and not active_preset else '' }}>
+<details {{ 'open' if jd_text and not active_preset else '' }} style="max-width:480px;">
   <summary class="muted" style="cursor:pointer; font-size:13px;">직접 입력하기</summary>
   <form
-    hx-post="/jd-match/panel"
+    hx-post="/jd-match/results"
     hx-target="#jd-panel-body"
     hx-swap="innerHTML"
     hx-indicator="#jd-panel-loading"
     style="margin-top:8px;"
   >
     <input type="hidden" name="company" value="{{ company_name }}">
-    <input type="hidden" name="domain" value="{{ selected_domain or '' }}">
-    <input type="hidden" name="official_only" value="{{ 'true' if official_only else '' }}">
     <textarea
       name="jd_text"
       rows="6"
@@ -37,8 +35,54 @@
   </form>
 </details>
 
-<div id="jd-panel-loading" class="htmx-indicator muted" style="font-size:13px; margin-top:8px;">매칭 중...</div>
+<div id="jd-panel-loading" class="htmx-indicator muted" style="font-size:13px; margin:10px 0;">매칭 중...</div>
 
-<div style="margin-top:10px;">
-  {% include "jd_panel_results.html" %}
-</div>
+{% if error %}
+  <div class="card" style="border-color:#dc2626; margin-top:16px;">
+    <div class="quote" style="border-color:#dc2626; color:#991b1b; margin:0;">{{ error }}</div>
+  </div>
+{% endif %}
+
+{% if jd %}
+  <div class="card" style="margin-top:16px;">
+    <strong>추출된 요약</strong>
+    <div class="muted">직무: {{ jd.role or '미상' }} &middot; {{ jd.role_subtype or '미상' }}</div>
+    {% if jd.entities %}<div class="muted">언급된 기술/제품: {{ jd.entities | join(', ') }}</div>{% endif %}
+    {% if jd.tasks %}
+      <ul style="margin:6px 0 0; padding-left:18px;">
+        {% for task in jd.tasks %}<li>{{ task }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    <details style="margin-top:8px;">
+      <summary class="muted" style="cursor:pointer;">채용공고 원문(JD 상세) 보기</summary>
+      <div class="quote" style="white-space:pre-wrap; font-size:13px; margin-top:6px;">{{ jd_text }}</div>
+    </details>
+  </div>
+{% endif %}
+
+{% if candidates %}
+  {% if thread_candidates %}
+    <h2 style="margin-top:24px;">관련 스레드</h2>
+    {% for c in thread_candidates %}
+      <div class="card">
+        <div class="muted">관련도 {{ '%.2f'|format(c.score) }}</div>
+        <h3><a class="title-link" href="/threads/{{ c.id }}">{{ c.title }}</a></h3>
+        {% for m in c.matches %}
+          <div class="muted" style="margin-top:6px;">JD 업무: {{ m.task }}</div>
+          <div class="quote">{{ m.evidence_text }} <span class="muted">({{ m.canonical_event_title }})</span></div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <h2 style="margin-top:24px;">관련 타임라인 이벤트</h2>
+  <label class="muted" style="display:flex; align-items:center; gap:6px; margin-bottom:12px;">
+    <input type="checkbox" onchange="document.getElementById('timeline-list').classList.toggle('jd-only', this.checked)">
+    관련 이벤트만 보기
+  </label>
+  <div id="timeline-list">
+    {% include "timeline_rows.html" %}
+  </div>
+{% elif jd and not error %}
+  <div class="empty">관련된 이벤트/스레드를 찾지 못했습니다.</div>
+{% endif %}

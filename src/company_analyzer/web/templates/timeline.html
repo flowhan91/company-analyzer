@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% block title %}타임라인 - {{ company_name }}{% endblock %}
-{% block sidebar %}{% include "jd_panel.html" %}{% endblock %}
 {% block content %}
   <h1>기업 타임라인</h1>
   <form method="get" style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
@@ -19,12 +18,5 @@
     </label>
   </form>
 
-  <label class="muted" id="jd-only-toggle-wrap" style="display:none; margin-bottom:12px; align-items:center; gap:6px;">
-    <input type="checkbox" id="jd-only-toggle" onchange="document.getElementById('timeline-list').classList.toggle('jd-only', this.checked)">
-    관련 이벤트만 보기
-  </label>
-
-  <div id="timeline-list">
-    {% include "timeline_rows.html" %}
-  </div>
+  {% include "timeline_rows.html" %}
 {% endblock %}

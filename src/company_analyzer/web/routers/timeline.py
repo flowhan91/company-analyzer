@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from company_analyzer.web.deps import build_timeline_rows, list_company_names, resolve_company
 from company_analyzer.web.main import get_db, templates
-from company_analyzer.web.routers.jd_match import SAMPLE_JDS
 
 router = APIRouter()
 
@@ -15,7 +14,7 @@ router = APIRouter()
 def index(request: Request, conn: DBConnection = Depends(get_db)):
     company = resolve_company(conn, None)
     return templates.TemplateResponse(
-        request, "redirect.html", {"to": f"/timeline?company={company.name}"}
+        request, "redirect.html", {"to": f"/jd-match?company={company.name}"}
     )
 
 
@@ -41,11 +40,6 @@ def timeline_view(
             "domains": domains,
             "selected_domain": domain or "",
             "official_only": official_only,
-            "presets": SAMPLE_JDS,
-            "active_preset": None,
-            "jd": None,
-            "candidates": None,
-            "error": None,
             "related_ids": None,
             "score_by_id": {},
         },
