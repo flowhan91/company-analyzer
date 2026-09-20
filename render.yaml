@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: company-analyzer
+    runtime: python
+    plan: free
+    buildCommand: pip install -e .
+    startCommand: uvicorn company_analyzer.web.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: LLM_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
